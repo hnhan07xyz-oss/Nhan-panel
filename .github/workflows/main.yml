@@ -20,18 +20,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle 8.7
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
+      - name: Extract project ZIP
+        run: |
+          unzip -q huunhan-full-dashboard-api-github.zip -d source
+
+      - name: Find Android project
+        run: |
+          ANDROID_DIR=$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | grep '/android/android/' | head -n 1 | xargs dirname)
+          if [ -z "$ANDROID_DIR" ]; then
+            echo "Khong tim thay Android Gradle project!"
+            find source -maxdepth 5 -type f | head -100
+            exit 1
+          fi
+          echo "ANDROID_DIR=$ANDROID_DIR" >> "$GITHUB_ENV"
+
       - name: Build APK
-        working-directory: android/android
-        run: gradle assembleDebug --no-daemon
+        run: gradle -p "$ANDROID_DIR" assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HuuNhan-APK
-          path: android/android/app/build/outputs/apk/debug/*.apk
+          path: source/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
